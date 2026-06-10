@@ -25,11 +25,19 @@ const FAVS = [
 
 const AVATAR_COLORS = ["#30D158", "#5AC8FA", "#FF9F0A", "#BF5AF2", "#FF6482", "#64D2FF"];
 
-/* Zones d'ambiance fixes dans le quartier (en plus des zones posées sur le trajet) */
+/* Zones mal éclairées — dérivées des données ouvertes de la Ville de Paris.
+   Source : opendata.paris.fr, dataset « eclairage-public » (points lumineux).
+   Méthode : la zone autour du quartier a été quadrillée en cellules de ~110 m ;
+   on retient les cellules urbaines (voisinage bien éclairé) où aucun ou très peu
+   de lampadaires sont répertoriés — des trous d'éclairage réels dans la trame. */
 const AMBIENT_ZONES = [
-  { level: "orange", lat: 48.8352, lng: 2.3551, r: 90, motif: "Rue déserte la nuit", n: 1 },
-  { level: "red",    lat: 48.8431, lng: 2.3402, r: 85, motif: "Rue peu éclairée",   n: 4 },
-  { level: "orange", lat: 48.8508, lng: 2.3568, r: 95, motif: "Éclairage partiel",  n: 2 },
+  { level: "red",    lat: 48.83825, lng: 2.33775, r: 95, motif: "Rue Henri Barbusse — aucun éclairage public répertorié", n: 4 },
+  { level: "red",    lat: 48.83495, lng: 2.35205, r: 95, motif: "Rue de Croulebarbe — éclairage public absent",          n: 4 },
+  { level: "red",    lat: 48.84265, lng: 2.33995, r: 95, motif: "Rue Henri Barbusse (sud) — éclairage non répertorié",   n: 3 },
+  { level: "orange", lat: 48.84705, lng: 2.36305, r: 90, motif: "Port Saint-Bernard — quai sombre la nuit",              n: 3 },
+  { level: "orange", lat: 48.84925, lng: 2.36085, r: 90, motif: "Berges de Seine (Pompidou) — éclairage très faible",    n: 4 },
+  { level: "red",    lat: 48.84375, lng: 2.36305, r: 95, motif: "Berges / square — éclairage absent la nuit",            n: 3 },
+  { level: "red",    lat: 48.85255, lng: 2.34985, r: 95, motif: "Promenade Maurice Carême — non éclairée la nuit",       n: 3 },
 ];
 
 /* État partagé de l'application */
