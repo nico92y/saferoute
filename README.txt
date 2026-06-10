@@ -1,18 +1,3 @@
-SAFEROUTE — DÉMO INTERACTIVE
-============================================================
-
-⚠️ IMPORTANT — OÙ OUVRIR LE SITE
-------------------------------------------------------------
-N'utilisez PAS l'aperçu intégré de Claude : il bloque le réseau
-(tuiles de carte, calcul d'itinéraire, Supabase), d'où l'écran
-vide et le "Mode local" que vous avez vu.
-
-→ Double-cliquez simplement sur index.html (Chrome / Edge /
-  Firefox), ou déployez le dossier sur Vercel.
-Tout fonctionne alors : vraie carte de Paris, vrais itinéraires
-piétons, base Supabase connectée.
-
-
 STRUCTURE DU PROJET
 ------------------------------------------------------------
 index.html              Structure de la page et des écrans
@@ -48,20 +33,6 @@ CORRECTIONS APPORTÉES (v2)
 5. Si les tuiles de carte sont injoignables, fond "plan de
    rues" propre au lieu d'un écran noir.
 6. Fiches contacts compactes (badge SOS, texte tronqué proprement).
-
-
-ASTUCES POUR LA SOUTENANCE
-------------------------------------------------------------
-• Pendant la navigation, cliquez la pastille "En route · ×1"
-  pour passer en ×4 (trajet bouclé en ~10 s).
-• Le SOS s'arme par APPUI LONG sur le bouton rouge.
-• Cliquez une zone colorée sur la carte → explication du score.
-• Bouton triangle (accueil) → signaler une rue en touchant la
-  carte → la ligne apparaît dans Supabase en direct
-  (table signalements) : montrable au jury.
-• Ajoutez un contact pendant la démo : il s'écrit dans la table
-  contacts (mention "Synchronisé avec Supabase" en bas de
-  l'écran contacts).
 
 
 DÉPLOIEMENT VERCEL (optionnel, 2 min)
