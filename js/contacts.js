@@ -70,17 +70,18 @@ $("cf-save").onclick = async () => {
   const c = state.editingContact;
   sheet("contact-form", false);
   const isLocal = c && String(c.id).startsWith("loc-");
-  if (dbOnline) {
+  // Relié au compte en base uniquement si le schéma le permet
+  if (dbScoped()) {
     try {
       if (c && !isLocal) {
         const upd = await sb("/contacts?id=eq." + c.id, { method: "PATCH", body });
         Object.assign(c, upd && upd[0] ? upd[0] : body);
       } else {
-        const ins = await sb("/contacts", { method: "POST", body });
+        const ins = await sb("/contacts", { method: "POST", body: { ...body, user_id: state.user.id } });
         if (c) Object.assign(c, ins[0]);
         else state.contacts.push(ins[0]);
       }
-      toast(c ? "Contact mis à jour" : "Contact ajouté — enregistré en base");
+      toast(c ? "Contact mis à jour" : "Contact ajouté — enregistré sur votre compte");
     } catch (e) { localSave(c, body); }
   } else {
     localSave(c, body);
@@ -91,7 +92,8 @@ $("cf-save").onclick = async () => {
 function localSave(c, body) {
   if (c) Object.assign(c, body);
   else state.contacts.push({ id: "loc-" + Date.now(), ...body });
-  toast(c ? "Contact mis à jour (local)" : "Contact ajouté (local)");
+  localContactsPersist();
+  toast(c ? "Contact mis à jour" : "Contact ajouté");
 }
 
 $("cf-delete").onclick = async () => {
@@ -99,8 +101,10 @@ $("cf-delete").onclick = async () => {
   sheet("contact-form", false);
   state.contacts = state.contacts.filter((x) => x !== c);
   renderContacts();
-  if (dbOnline && c && !String(c.id).startsWith("loc-")) {
+  if (dbScoped() && c && !String(c.id).startsWith("loc-")) {
     try { await sb("/contacts?id=eq." + c.id, { method: "DELETE" }); } catch (e) {}
+  } else {
+    localContactsPersist();
   }
   toast("Contact supprimé");
 };

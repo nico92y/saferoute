@@ -85,19 +85,11 @@ function requestLocation() {
   );
 }
 
-/* --------- splash & démarrage --------- */
+/* --------- splash & démarrage ---------
+   Après le splash, boot() (auth.js) décide : session existante →
+   on entre dans l'app et on charge les données de la personne
+   connectée ; sinon → écran de connexion. */
 setTimeout(() => {
   layerShow("splash", false);
-  sheet("home-sheet", true);
-  requestLocation();
+  boot();
 }, 1900);
-
-(async function init() {
-  await loadContacts();
-  if (dbOnline) {
-    try {
-      const sigs = await sb("/signalements?select=*&order=created_at.desc&limit=20");
-      (sigs || []).forEach(drawSignalement);
-    } catch (e) { /* silencieux */ }
-  }
-})();

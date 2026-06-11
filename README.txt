@@ -4,7 +4,8 @@ index.html              Structure de la page et des écrans
 css/styles.css          Tout le design (thème sombre Apple-like)
 js/config.js            Clés Supabase, favoris, état global
 js/helpers.js           Utilitaires (DOM, toast, géométrie)
-js/db.js                Client REST Supabase (contacts/trajets/signalements)
+js/db.js                Client REST Supabase + comptes (détection schéma, signIn, contacts par utilisateur)
+js/auth.js              Écran de connexion & cycle de session
 js/map.js               Carte Leaflet, zones de risque, tracés colorés
 js/routing.js           Itinéraires piétons réels (OSRM) + détour sécurisé
 js/search.js            Recherche d'adresse (Nominatim), favoris, récents
@@ -13,7 +14,29 @@ js/contacts.js          Contacts d'urgence (CRUD en base) + écran d'appel
 js/sos.js               Mode SOS (appui long pour armer)
 js/report.js            Signalement d'une rue (écrit en base)
 js/main.js              Orchestration, horloge, mise à l'échelle
-saferoute_supabase.sql  Schéma de la base (déjà importé chez vous ✓)
+saferoute_supabase.sql  Schéma de la base (+ migration « comptes »)
+
+
+CONNEXION & CONTACTS RELIÉS À L'UTILISATEUR
+------------------------------------------------------------
+Chaque personne se connecte avec son e-mail (écran d'accueil).
+Ses contacts d'urgence et ses trajets lui sont reliés via la
+colonne user_id. Un mode « invité » reste disponible.
+
+IMPORTANT — pour synchroniser les comptes en base, exécutez la
+migration : Supabase → SQL Editor → collez saferoute_supabase.sql
+→ Run. Elle crée la table `utilisateurs` et ajoute `user_id` aux
+tables `contacts` et `trajets` (idempotent, sans perte de données).
+Tant que la migration n'est pas appliquée, l'app fonctionne quand
+même : les contacts sont alors stockés localement, par compte
+(la pastille en bas de l'écran Contacts indique l'état réel).
+
+ZONES DANGEREUSES — NORD DE PARIS
+------------------------------------------------------------
+Ajout de zones de risque dans le nord (18e/19e : Porte de la
+Chapelle, Clignancourt, Stalingrad, Goutte d'Or, Rosa Parks…)
+dans js/config.js (AMBIENT_ZONES) + signalements correspondants
+insérés dans la base Supabase (visibles sur la carte par tous).
 
 
 CORRECTIONS APPORTÉES (v2)

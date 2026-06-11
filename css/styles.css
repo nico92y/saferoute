@@ -201,6 +201,18 @@ h2.sheet-title{font-size:21px;font-weight:700;letter-spacing:-.2px}
 .splash-logo p{font-size:13.5px;color:var(--muted)}
 @keyframes rise{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
 
+/* ----- connexion ----- */
+#view-auth{z-index:120;background:var(--screen-bg);align-items:center;justify-content:center;padding:0 26px}
+.auth-wrap{display:flex;flex-direction:column;align-items:center;gap:13px;width:100%;max-width:330px;animation:rise .6s cubic-bezier(.2,.7,.2,1)}
+.auth-title{font-size:25px;font-weight:700;letter-spacing:-.4px}
+.auth-lead{text-align:center;margin-top:-4px}
+.auth-card{width:100%;margin-top:12px}
+.auth-card .field{margin-bottom:13px}
+.auth-card .btn{margin-top:4px}
+.auth-msg{font-size:12.5px;font-weight:600;text-align:center;min-height:17px;margin-top:9px}
+.auth-guest{background:none;border:none;color:var(--muted);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;padding:11px;display:block;margin:2px auto 0}
+.auth-guest:active{opacity:.6}
+
 /* ----- barres hautes (accueil & itinéraire) ----- */
 .top-chrome{
   position:absolute;top:64px;left:14px;right:14px;z-index:42;display:flex;gap:10px;

@@ -61,18 +61,26 @@ function zoneColor(l) { return l === "red" ? "#FF453A" : "#FF9F0A"; }
 function drawZones() {
   zoneLayer.clearLayers();
   [...AMBIENT_ZONES, ...routeZones].forEach((z) => {
+    const col = zoneColor(z.level);
+    /* Rayon d'affichage agrandi pour rester visible même très dézoomé
+       (Paris entier). La détection d'itinéraire utilise toujours z.r. */
+    const drawR = (z.level === "red" ? 220 : 190);
     const c = L.circle([z.lat, z.lng], {
-      radius: z.r, color: zoneColor(z.level), weight: 1.5, opacity: 0.55,
-      fillColor: zoneColor(z.level), fillOpacity: 0.16,
+      radius: drawR, color: col, weight: 2, opacity: 0.9,
+      fillColor: col, fillOpacity: 0.32,
     }).addTo(zoneLayer);
     const tag = z.level === "red" ? "Risque élevé" : "Vigilance";
     c.bindPopup(
-      '<div class="zp-tag" style="color:' + zoneColor(z.level) + '">' + tag + "</div>" +
+      '<div class="zp-tag" style="color:' + col + '">' + tag + "</div>" +
       '<div class="zp-t">' + z.motif + "</div>" +
       '<div class="zp-d">' + z.n + " signalement" + (z.n > 1 ? "s" : "") + " ce mois-ci · score communautaire</div>"
     );
   });
 }
+
+/* Affichage initial des zones d'éclairage dès le chargement de l'accueil
+   (sans ça, les zones n'apparaissaient qu'après le calcul d'un itinéraire). */
+drawZones();
 
 function drawSignalement(s) {
   L.marker([s.lat, s.lng], {
