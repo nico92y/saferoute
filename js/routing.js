@@ -160,6 +160,45 @@ async function buildRoutes(dest) {
    Point de départ choisi sur la carte
    ============================================================ */
 let originMarker = null;
+let pointMarker = null;
+
+/* Repère temporaire posé au toucher : on choisit ensuite « S'y rendre »
+   (destination) ou « Partir d'ici » (départ de l'itinéraire). */
+function placeMapPoint(latlng) {
+  const ll = [latlng.lat, latlng.lng];
+  if (pointMarker) pointMarker.setLatLng(ll);
+  else pointMarker = L.marker(ll, {
+    icon: L.divIcon({ className: "", html: '<div class="dest-pin"></div>', iconSize: [30, 30], iconAnchor: [15, 28] }),
+    zIndexOffset: 450,
+  }).addTo(map);
+  pointMarker.bindPopup(mapPointPopup(latlng), { minWidth: 196, closeButton: true }).openPopup();
+}
+
+function mapPointPopup(latlng) {
+  const wrap = document.createElement("div");
+  wrap.innerHTML =
+    '<div class="zp-tag" style="color:var(--green)">Point sur la carte</div>' +
+    '<div class="zp-d" style="margin-bottom:9px">Que voulez-vous faire de ce point ?</div>' +
+    '<div class="zp-acts">' +
+      '<button class="zp-btn ok" type="button" data-act="go">S’y rendre</button>' +
+      '<button class="zp-btn" type="button" data-act="from">Partir d’ici</button>' +
+    "</div>";
+  wrap.querySelector('[data-act="go"]').onclick = () => {
+    map.closePopup();
+    removeMapPoint();
+    selectDestination({ lat: latlng.lat, lng: latlng.lng, label: "Point sur la carte" });
+  };
+  wrap.querySelector('[data-act="from"]').onclick = () => {
+    map.closePopup();
+    removeMapPoint();
+    setOrigin(latlng);
+  };
+  return wrap;
+}
+
+function removeMapPoint() {
+  if (pointMarker) { map.removeLayer(pointMarker); pointMarker = null; }
+}
 
 function setOrigin(latlng) {
   state.origin = { lat: latlng.lat, lng: latlng.lng, label: "Point de départ" };
@@ -174,12 +213,13 @@ function setOrigin(latlng) {
 function clearOrigin() {
   state.origin = null;
   if (originMarker) { map.removeLayer(originMarker); originMarker = null; }
+  removeMapPoint();
 }
 
-/* Toucher la carte sur l'accueil = définir le départ de l'itinéraire.
+/* Toucher la carte sur l'accueil = poser un repère (s'y rendre / en partir).
    (Le mode signalement, géré dans report.js, a la priorité.) */
 map.on("click", (e) => {
   if (state.picking || state.navTimer || state.routes) return;
   if ($("home-chrome").classList.contains("off")) return; // seulement sur l'accueil
-  setOrigin(e.latlng);
+  placeMapPoint(e.latlng);
 });
