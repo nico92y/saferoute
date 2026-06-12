@@ -11,12 +11,6 @@ const START = { lat: 48.8392, lng: 2.3486, label: "Ma position" };
 
 const DEFAULT_DEST = { lat: 48.8478, lng: 2.3517, label: "12 rue des Écoles, Paris" };
 
-const DEFAULT_CONTACTS = [
-  { id: "loc-1", nom: "Léa",   relation: "Sœur", telephone: "+33 6 12 34 56 78", prioritaire: true },
-  { id: "loc-2", nom: "Maman", relation: "Mère", telephone: "+33 6 98 76 54 32", prioritaire: true },
-  { id: "loc-3", nom: "Karim", relation: "Ami",  telephone: "+33 7 45 21 09 87", prioritaire: false },
-];
-
 const FAVS = [
   { ...DEFAULT_DEST, ico: "🏠", chip: "12 rue des Écoles" },
   { lat: 48.8478, lng: 2.3621, label: "Campus Jussieu — Sorbonne Université", ico: "🎓", chip: "Fac" },
@@ -87,6 +81,7 @@ const AMBIENT_ZONES = [
 /* État partagé de l'application */
 const state = {
   user: null,            // { id, email, nom, guest? } : personne connectée
+  origin: null,          // { lat, lng, label } : départ choisi sur la carte (sinon = position)
   dest: null,
   routes: null,          // { direct:{coords,dist,min}, safe:{coords,dist,min} }
   selected: "safe",

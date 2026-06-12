@@ -12,6 +12,9 @@ function fabs(on) { $("home-fabs").classList.toggle("off", !on); }
 function goHome() {
   stopNav();
   clearRoutes();
+  clearOrigin();
+  state.routes = null;
+  state.dest = null;
   routeZones = [];
   drawZones();
   sheet("home-sheet", true);
@@ -61,7 +64,10 @@ function applyTheme(light) {
 $("theme-toggle").onclick = () => applyTheme(!document.body.classList.contains("light"));
 
 /* --------- divers --------- */
-$("fab-locate").onclick = () => map.flyTo([START.lat, START.lng], 16, { duration: 0.7 });
+$("fab-locate").onclick = () => {
+  if (state.origin) { clearOrigin(); toast("Départ : votre position"); }
+  map.flyTo([START.lat, START.lng], 16, { duration: 0.7 });
+};
 $("home-sheet").querySelector(".grab").onclick = () => sheet("home-sheet", false);
 $("route-sheet").querySelector(".grab").onclick = () => goHome();
 

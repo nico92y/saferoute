@@ -44,14 +44,99 @@ function fallbackLine(a, b, variant) {
   return { coords: pts, dist: pathLength(pts) };
 }
 
+/* ----- mesure du « danger » d'un tracé -----
+   Longueur (m) parcourue dans une zone signalée, le rouge pénalisé ×3.
+   S'appuie sur levelAt() qui couvre routeZones ET AMBIENT_ZONES. */
+function segDanger(a, b) {
+  const lv = levelAt([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]);
+  const w = lv === "red" ? 3 : lv === "orange" ? 1 : 0;
+  return w ? w * distM(a, b) : 0;
+}
+function dangerScore(coords) {
+  let s = 0;
+  for (let i = 1; i < coords.length; i++) s += segDanger(coords[i - 1], coords[i]);
+  return s;
+}
+function redLength(coords) {
+  let s = 0;
+  for (let i = 1; i < coords.length; i++) {
+    const m = [(coords[i - 1][0] + coords[i][0]) / 2, (coords[i - 1][1] + coords[i][1]) / 2];
+    if (levelAt(m) === "red") s += distM(coords[i - 1], coords[i]);
+  }
+  return s;
+}
+
+/* Zone (rouge/orange) la plus profondément traversée par le tracé */
+function worstZoneOnPath(coords) {
+  let worst = null, ws = 0;
+  for (const z of [...routeZones, ...AMBIENT_ZONES]) {
+    let dmin = Infinity;
+    for (const p of coords) { const d = distM(p, [z.lat, z.lng]); if (d < dmin) dmin = d; }
+    if (dmin < z.r) {
+      const sev = (z.r - dmin) * (z.level === "red" ? 3 : 1);
+      if (sev > ws) { ws = sev; worst = z; }
+    }
+  }
+  return worst;
+}
+
+/* Point de passage qui contourne une zone : on repousse hors du rayon
+   le point du tracé le plus proche du centre de la zone. */
+function viaAroundZone(coords, zone, sign, magDeg) {
+  let P = coords[0], dmin = Infinity;
+  for (const p of coords) { const d = distM(p, [zone.lat, zone.lng]); if (d < dmin) { dmin = d; P = p; } }
+  let vy = P[0] - zone.lat, vx = P[1] - zone.lng;
+  const n = Math.hypot(vx, vy) || 1; vx /= n; vy /= n;
+  const dist = zone.r / 111000 + magDeg;   // sortir du rayon + marge
+  return [zone.lat + vy * dist * sign, zone.lng + vx * dist * sign];
+}
+
+/* Garde les points de passage ordonnés le long de A→B */
+function sortVias(vias, A) {
+  return vias.slice().sort((p, q) => distM(A, p) - distM(A, q));
+}
+
+/* Construit un itinéraire qui évite au mieux les zones rouges/oranges :
+   on insère itérativement des points de passage autour de la zone la plus
+   traversée, et on garde le tracé au plus faible « danger ». */
+async function findSafeRoute(A, B, direct) {
+  let best = direct, bestScore = dangerScore(direct.coords);
+  if (bestScore === 0) return direct;
+  let vias = [], current = direct;
+
+  for (let iter = 0; iter < 3; iter++) {
+    const worst = worstZoneOnPath(current.coords);
+    if (!worst) break;
+    let pick = null, pickScore = bestScore;
+    for (const sign of [1, -1]) {
+      for (const mag of [0.005, 0.009]) {
+        const via = viaAroundZone(current.coords, worst, sign, mag);
+        const trial = sortVias([...vias, via], A);
+        try {
+          const cand = await osrm([A, ...trial, B]);
+          const sc = dangerScore(cand.coords);
+          if (sc < pickScore - 1) { pickScore = sc; pick = { cand, via }; }
+        } catch (e) { /* on essaie une autre variante */ }
+      }
+    }
+    if (!pick) break;
+    vias = sortVias([...vias, pick.via], A);
+    current = pick.cand;
+    best = pick.cand; bestScore = pickScore;
+    if (redLength(best.coords) === 0 && bestScore < 60) break; // assez propre
+  }
+  return best;
+}
+
 async function buildRoutes(dest) {
-  const A = [START.lat, START.lng], B = [dest.lat, dest.lng];
+  const o = state.origin || START;
+  const A = [o.lat, o.lng], B = [dest.lat, dest.lng];
 
   let direct;
   try { direct = await osrm([A, B]); }
   catch (e) { direct = fallbackLine(A, B, "direct"); }
 
-  // Zones de risque posées sur le trajet direct (56 % et 78 % du parcours)
+  // Zones de risque scénarisées sur le trajet direct (56 % et 78 % du parcours)
   const zRed = pointAt(direct.coords, 0.56);
   const zOr  = pointAt(direct.coords, 0.78);
   routeZones = [
@@ -60,25 +145,9 @@ async function buildRoutes(dest) {
   ];
   drawZones();
 
-  // Détour : point de passage décalé perpendiculairement à la zone rouge
-  const i = Math.floor(direct.coords.length * 0.56);
-  const p0 = direct.coords[Math.max(0, i - 3)];
-  const p1 = direct.coords[Math.min(direct.coords.length - 1, i + 3)];
-  let dx = p1[1] - p0[1], dy = p1[0] - p0[0];
-  const n = Math.hypot(dx, dy) || 1; dx /= n; dy /= n;
-  const OFF = 0.0032; // ≈ 280 m
-
-  let safe = null;
-  for (const sign of [1, -1]) {
-    const via = [zRed[0] + (-dx) * OFF * sign, zRed[1] + dy * OFF * sign];
-    try {
-      const cand = await osrm([A, via, B]);
-      const crossesRed = cand.coords.some((p) => distM(p, zRed) < 115);
-      if (!crossesRed) { safe = cand; break; }
-      if (!safe) safe = cand;
-    } catch (e) { /* on essaie l'autre côté */ }
-  }
-  if (!safe) safe = fallbackLine(A, B, "safe");
+  // Itinéraire sûr : contourne les zones rouges/oranges (route + ambiantes)
+  let safe = await findSafeRoute(A, B, direct);
+  if (safe === direct) safe = fallbackLine(A, B, "safe"); // OSRM indispo → détour géométrique
 
   const toMin = (d) => Math.max(1, Math.round(d / 80)); // marche ≈ 4,8 km/h
   state.routes = {
@@ -86,3 +155,31 @@ async function buildRoutes(dest) {
     safe:   { ...safe,   min: Math.max(toMin(safe.dist), toMin(direct.dist) + 1) },
   };
 }
+
+/* ============================================================
+   Point de départ choisi sur la carte
+   ============================================================ */
+let originMarker = null;
+
+function setOrigin(latlng) {
+  state.origin = { lat: latlng.lat, lng: latlng.lng, label: "Point de départ" };
+  if (originMarker) originMarker.setLatLng(latlng);
+  else originMarker = L.marker(latlng, {
+    icon: L.divIcon({ className: "", html: '<div class="start-pin">A</div>', iconSize: [26, 26], iconAnchor: [13, 13] }),
+    zIndexOffset: 400,
+  }).addTo(map);
+  toast("Départ placé ici — choisissez votre destination", "🅰️");
+}
+
+function clearOrigin() {
+  state.origin = null;
+  if (originMarker) { map.removeLayer(originMarker); originMarker = null; }
+}
+
+/* Toucher la carte sur l'accueil = définir le départ de l'itinéraire.
+   (Le mode signalement, géré dans report.js, a la priorité.) */
+map.on("click", (e) => {
+  if (state.picking || state.navTimer || state.routes) return;
+  if ($("home-chrome").classList.contains("off")) return; // seulement sur l'accueil
+  setOrigin(e.latlng);
+});

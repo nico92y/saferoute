@@ -113,8 +113,6 @@ async function signIn(email, nom) {
 /* ============================================================
    Contacts — reliés à la personne connectée
    ============================================================ */
-const seedContacts = () => DEFAULT_CONTACTS.map(({ id, ...c }) => c);
-
 function contactsKey() {
   return "sr-contacts-" + (state.user ? (state.user.email || "guest") : "anon");
 }
@@ -131,31 +129,21 @@ function localContactsPersist() {
 async function loadContacts() {
   const u = state.user;
 
-  /* Mode base + comptes : contacts filtrés sur l'utilisateur connecté */
+  /* Mode base + comptes : seuls les contacts de l'utilisateur connecté.
+     Un nouveau compte démarre SANS contact — c'est à lui d'ajouter ses
+     proches ; rien n'est partagé avec les autres comptes. */
   if (dbScoped()) {
     try {
-      let rows = await sb("/contacts?user_id=eq." + u.id + "&select=*&order=created_at.asc");
-      if (!rows || !rows.length) {
-        // Premier login : on amorce les contacts de démo, reliés au compte
-        try {
-          rows = await sb("/contacts", {
-            method: "POST",
-            body: seedContacts().map((c) => ({ ...c, user_id: u.id })),
-          });
-        } catch (e) {
-          rows = seedContacts().map((c, i) => ({ id: "loc-" + i, ...c }));
-        }
-      }
-      state.contacts = rows;
+      const rows = await sb("/contacts?user_id=eq." + u.id + "&select=*&order=created_at.asc");
+      state.contacts = rows || [];
       setDbNote("synced");
       return;
     } catch (e) { /* bascule en local ci-dessous */ }
   }
 
-  /* Mode local par utilisateur (pas de migration, hors-ligne, ou invité) */
-  const saved = localContactsLoad();
-  state.contacts = saved || seedContacts().map((c, i) => ({ id: "loc-" + Date.now() + "-" + i, ...c }));
-  if (!saved) localContactsPersist();
+  /* Mode local par utilisateur (pas de migration, hors-ligne, ou invité).
+     Sans contacts enregistrés pour ce compte → liste vide. */
+  state.contacts = localContactsLoad() || [];
   setDbNote(u && u.guest ? "guest" : (dbOnline ? "nomigration" : "offline"));
 }
 
@@ -181,7 +169,7 @@ async function saveTrajet(r) {
   if (!dbOnline) return;
   try {
     const body = {
-      depart: "Ma position",
+      depart: state.origin ? state.origin.label : "Ma position",
       arrivee: state.dest.label.split(",")[0],
       duree_min: r.min,
       distance_km: +(r.dist / 1000).toFixed(2),
